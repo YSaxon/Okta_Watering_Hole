@@ -193,13 +193,14 @@ def encode_replacement(replace_url):
 
 def modify_index():
     quiet_print("Modifying index.html...", True)
-    target_re = re.match('(https?://)(.*)', args[0])
+    target_re = re.match(r'(https?://)(.*)', args[0])
 
     with open("webroot/index.html", 'r+') as index:
         index_content = index.read()
-        base_url_replace = "var baseUrl = '" + encode_replacement(args[1]) + "'\n"
+        base_url = args[1].replace('\\', '\\\\').replace("'", "\\'")
+        base_url_replace = "var baseUrl = '" + base_url + "'\n"
         index_content_new = re.sub(
-            "var baseUrl = .*\n", base_url_replace, index_content)
+            r"var baseUrl = .*\n", base_url_replace, index_content)
         index.seek(0)
         index.write(index_content_new)
         index.truncate()
