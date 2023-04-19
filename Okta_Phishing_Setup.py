@@ -9,18 +9,18 @@
 #                                                                             #
 ###############################################################################
 
-from BaseHTTPServer import BaseHTTPRequestHandler, HTTPServer
-from SocketServer import ThreadingMixIn
+from http.server import BaseHTTPRequestHandler, HTTPServer
+from socketserver import ThreadingMixIn
 from threading import Lock, Thread
-from urlparse import urlparse
-import SocketServer
+from urllib.parse import urlparse
+import socketserver
 import simplejson
 import threading
 import optparse
 import datetime
 import requests
-import urllib2
-import Cookie
+import urllib.request, urllib.error, urllib.parse
+import http.cookies
 import random
 import string
 import signal
@@ -99,7 +99,7 @@ def log_print(string):
                 log.write("\n")
         except IOError as e:
             if (not options.quiet_mode):
-                print("outfile could not be opened: " + options.log_file)
+                print(("outfile could not be opened: " + options.log_file))
 
 
 def quiet_print(string, log=False):
@@ -113,7 +113,7 @@ def quiet_print(string, log=False):
 
 def download_site():
     quiet_print("Downloading index.html...", True)
-    response = urllib2.urlopen(args[0])
+    response = urllib.request.urlopen(args[0])
     webContent = response.read()
     if not os.path.exists(os.path.dirname("webroot/index.html")):
         try:
@@ -337,7 +337,7 @@ class S(BaseHTTPRequestHandler):
         cookies = self.headers.get('Cookie')
         rid = ""
         if cookies:
-            stub = Cookie.BaseCookie(cookies).get('rid')
+            stub = http.cookies.BaseCookie(cookies).get('rid')
             if stub:
                 rid = stub.value
         return rid
@@ -346,7 +346,7 @@ class S(BaseHTTPRequestHandler):
         cookies = self.headers.get('Cookie')
         jsesh = ""
         if cookies:
-            stub = Cookie.BaseCookie(cookies).get('JSESSIONID')
+            stub = http.cookies.BaseCookie(cookies).get('JSESSIONID')
             if stub:
                 jsesh = stub.value
         return jsesh
