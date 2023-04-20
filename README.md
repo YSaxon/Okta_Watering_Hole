@@ -1,5 +1,5 @@
 # Okta Watering Hole
-### Authors: Alex Bainbridge, Robert Leonard
+### Authors: Alex Bainbridge, Robert Leonard, Py3 fork by Yaakov Saxon
 
 Okta Watering Hole is an automated tool for setting up an advanced Okta phishing campaign.
 
