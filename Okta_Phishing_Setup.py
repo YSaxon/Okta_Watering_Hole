@@ -33,6 +33,10 @@ import os
 import re
 import errno
 
+REDOWNLOAD_SITE_EACH_TIME=False
+DO_LIVE_CHECK=False
+
+
 
 global users, guppies, basses, twonas, oktapuses, die, die_lock, lock
 lock = Lock()
@@ -238,14 +242,16 @@ def main():
       quiet_print("----------" + start_time + "-----------", True)
       log_print("----------------------------------------")
       download = requests.Session()
-      live_check = download.get(REAL_OKTA_URL)
-      if (live_check.status_code != 200):
-          quiet_print("Host: " + REAL_OKTA_URL + " failed live (200) check", True)
-          quiet_print("Exiting...", True)
-          exit(1)
+      if DO_LIVE_CHECK:
+        live_check = download.get(REAL_OKTA_URL)
+        if (live_check.status_code != 200):
+            quiet_print("Host: " + REAL_OKTA_URL + " failed live (200) check", True)
+            quiet_print("Exiting...", True)
+            exit(1)
 
-      download_site()
-      modify_index()
+      if REDOWNLOAD_SITE_EACH_TIME or not os.path.exists(os.path.dirname("webroot/index.html")):
+        download_site()
+        modify_index()
       quiet_print("-------------Setup Complete-------------", True)
       quiet_print("-------------Starting Server------------", True)
       start_server()
