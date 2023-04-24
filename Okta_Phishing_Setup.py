@@ -595,7 +595,7 @@ def get_okta_session(url, JSESSION_ID):
 
 
 def okta_authenticate(username, password):
-    data = {'usrname': username, 'password': password, 'relayState': '/app/userHome#',
+    data = {'username': username, 'password': password, 'relayState': '/app/userHome#',
         'options': {'multiOptionalFactorEnroll': 'false', 'warnBeforePasswordExpired': 'false'}}
     response = requests.post(
         '{}/api/v1/authn'.format(REAL_OKTA_URL), headers=headers, json=data)
